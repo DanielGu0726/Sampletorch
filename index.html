@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sampletorch — 아이디어에 불을 붙이는 스튜디오</title>
+  <meta name="description" content="Sampletorch는 아이디어를 2주 안에 손에 잡히는 프로토타입으로 만드는 스튜디오입니다.">
+  <meta name="theme-color" content="#0E1033">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="stage" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="nav">
+    <a class="brand" href="#top" aria-label="Sampletorch 홈">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2c2 6 9 9 9 17a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 3 4 4 4-1-4 0-7 1-10z" fill="url(#g)"/><defs><linearGradient id="g" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF3D7F"/><stop offset="1" stop-color="#FFB23F"/></linearGradient></defs></svg>
+      <span>Sampletorch</span>
+    </a>
+    <nav aria-label="주요 메뉴">
+      <a href="#how">일하는 방식</a>
+      <a href="#work">작업</a>
+      <a class="nav-cta" href="#contact">의뢰하기</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" data-scene="0">
+      <h1 class="hero-title" aria-label="Sampletorch">
+        <span class="line"><span class="word">Sample</span></span>
+        <span class="line"><span class="word">torch</span></span>
+      </h1>
+      <div class="hero-foot">
+        <p class="hero-lede">아이디어는 많고, 불씨는 하나면 됩니다.<br>우리는 그 불씨를 2주 안에 손에 잡히는 프로토타입으로 키웁니다.</p>
+        <div class="hero-actions">
+          <a class="btn btn-flame" href="#contact">프로젝트 의뢰하기</a>
+          <a class="btn btn-ghost" href="#work">작업 보기</a>
+        </div>
+      </div>
+      <p class="scroll-hint" aria-hidden="true"><span></span>스크롤해서 불꽃을 키워보세요</p>
+    </section>
+
+    <section class="manifesto" data-scene="1">
+      <p class="big-quote">
+        완벽한 기획서보다<br>
+        타오르는 샘플 하나가<br>
+        회의실 공기를 바꿉니다.
+      </p>
+      <dl class="facts">
+        <div><dt>14일</dt><dd>첫 미팅부터 작동하는 데모까지</dd></div>
+        <div><dt>120+</dt><dd>지금까지 불을 붙인 프로토타입</dd></div>
+        <div><dt>3가지</dt><dd>3D, 웹, 앱. 손에 잡히는 형태라면 무엇이든</dd></div>
+      </dl>
+    </section>
+
+    <section class="how" id="how" data-scene="2">
+      <h2 class="section-title">불씨에서 불꽃까지</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-n">1</span>
+          <h3>불씨 찾기</h3>
+          <p>하루 동안 함께 앉아 아이디어에서 꼭 검증해야 할 한 가지를 고릅니다. 나머지는 과감히 뒤로 미룹니다.</p>
+          <span class="step-time">1일</span>
+        </li>
+        <li>
+          <span class="step-n">2</span>
+          <h3>점화</h3>
+          <p>실제로 클릭하고, 돌려보고, 만져볼 수 있는 샘플을 만듭니다. 매일 저녁 진행 상황을 링크로 보내드립니다.</p>
+          <span class="step-time">10일</span>
+        </li>
+        <li>
+          <span class="step-n">3</span>
+          <h3>번지기</h3>
+          <p>진짜 사용자 앞에 샘플을 내놓고 반응을 기록합니다. 계속 키울지, 끌지를 데이터로 결정합니다.</p>
+          <span class="step-time">3일</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="work" id="work" data-scene="3">
+      <h2 class="section-title">최근에 붙인 불</h2>
+      <p class="work-help">프로젝트에 마우스를 올리면 불꽃이 그 프로젝트의 색으로 바뀝니다.</p>
+      <ul class="work-list">
+        <li data-hue="ember"><a href="#contact"><span class="w-name">Lumen Atelier</span><span class="w-kind">조명 브랜드 3D 컨피규레이터</span><span class="w-year">2026</span></a></li>
+        <li data-hue="ice"><a href="#contact"><span class="w-name">Coldbrew Radio</span><span class="w-kind">실시간 사운드 비주얼라이저</span><span class="w-year">2026</span></a></li>
+        <li data-hue="acid"><a href="#contact"><span class="w-name">Moss &amp; Kiln</span><span class="w-kind">도자기 공방 예약 앱</span><span class="w-year">2025</span></a></li>
+        <li data-hue="violet"><a href="#contact"><span class="w-name">Orbit Ledger</span><span class="w-kind">우주 스타트업 투자자 데모</span><span class="w-year">2025</span></a></li>
+        <li data-hue="solar"><a href="#contact"><span class="w-name">Hanji Motion</span><span class="w-kind">한지 질감 인터랙티브 전시</span><span class="w-year">2025</span></a></li>
+      </ul>
+    </section>
+
+    <section class="contact" id="contact" data-scene="4">
+      <h2 class="contact-title">같이 불 붙여<br>볼까요?</h2>
+      <p class="contact-lede">아이디어 한 줄이면 충분합니다. 영업일 기준 하루 안에 답장드립니다.</p>
+      <a class="mail" href="mailto:hello@sampletorch.dev">hello@sampletorch.dev</a>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>© 2026 Sampletorch</span>
+    <span>서울에서 불 피우는 중</span>
+  </footer>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
