@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isSmall = () => innerWidth < 760;
@@ -14,7 +13,7 @@ addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 40),
 // ---------- 섹션별 배치 ----------
 // x/y: 화면 위치, s: 크기, tilt: 앞으로 기울기(교합면이 보이도록)
 const SCENES = [
-  { x:  2.45, y: -0.15, s: 0.80, tilt: .48 },
+  { x:  2.45, y: -0.15, s: 0.80, tilt: .58 },
   { x:  2.00, y: -0.05, s: 0.82, tilt: .30 },
   { x:  3.05, y:  0.00, s: 0.66, tilt: .55 },
   { x: -3.00, y: -0.05, s: 0.64, tilt: .45 },
@@ -32,33 +31,14 @@ const MATERIALS = {
 };
 
 // ---------- 형상 만들기 ----------
-function crownGeometry() {
-  let g = new THREE.SphereGeometry(1, 180, 130);
-  g.deleteAttribute('normal');
-  g.deleteAttribute('uv');
-  g = mergeVertices(g);
-  const p = g.attributes.position;
-  const cusps = [[.43, .36], [-.43, .36], [.43, -.36], [-.43, -.36], [0, .5]];
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    // 치경부로 갈수록 좁아짐
-    const cerv = smoothstep(-y, -.1, 1);
-    const bulge = 1 + .07 * Math.exp(-((y - .12) ** 2) / .08);
-    const nx = x * (1 - .34 * cerv) * bulge;
-    const nz = z * .9 * (1 - .34 * cerv) * bulge;
-    let ny = y > 0 ? y * .6 : y * 1.05;
-    // 교합면: 교두 4+1개, 중심와, 중심 열구
-    if (y > 0) {
-      const w = smoothstep(y, .3, .95);
-      let h = 0;
-      for (const [cx, cz] of cusps) h += .3 * Math.exp(-((nx - cx) ** 2 + (nz - cz) ** 2) / .05);
-      h -= .2 * Math.exp(-(nx * nx + nz * nz) / .05);
-      h -= .07 * Math.exp(-(nz * nz) / .004) * Math.exp(-(nx * nx) / .35);
-      h -= .05 * Math.exp(-(nx * nx) / .004) * Math.exp(-(nz * nz) / .5);
-      ny += w * h;
-    }
-    p.setXYZ(i, nx, ny, nz);
-  }
+// 실제 디자인한 상악 구치부 크라운(mesh_17.stl)을 변환한 메쉬
+// 형식: [정점 수 u32][인덱스 수 u32][위치 f32×3…][인덱스 u16…], 마진 Y=0, 교합면 +Y
+async function crownGeometry() {
+  const buf = await (await fetch('models/crown17.bin')).arrayBuffer();
+  const [nv, ni] = new Uint32Array(buf, 0, 2);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(buf, 8, nv * 3), 3));
+  g.setIndex(new THREE.BufferAttribute(new Uint16Array(buf, 8 + nv * 12, ni), 1));
   g.computeVertexNormals();
   return g;
 }
@@ -75,8 +55,8 @@ function fixtureGeometry() {
 }
 
 function abutmentGeometry() {
-  const pts = [V2(0, 0), V2(.34, 0), V2(.40, .12), V2(.49, .3), V2(.55, .42), V2(.47, .46),
-    V2(.41, .52), V2(.38, .9), V2(.35, 1.22), V2(.28, 1.33), V2(0, 1.35)];
+  const pts = [V2(0, 0), V2(.36, 0), V2(.44, .1), V2(.58, .26), V2(.72, .38), V2(.75, .42), V2(.62, .46),
+    V2(.46, .52), V2(.40, .9), V2(.36, 1.2), V2(.29, 1.32), V2(0, 1.34)];
   return new THREE.LatheGeometry(pts, 72);
 }
 
@@ -87,7 +67,7 @@ function screwGeometry() {
   return new THREE.LatheGeometry(pts, 48);
 }
 
-function boot() {
+async function boot() {
   const canvas = document.getElementById('stage');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, isSmall() ? 1.5 : 2));
@@ -120,20 +100,19 @@ function boot() {
   const crownMat = new THREE.MeshPhysicalMaterial({
     color: MATERIALS.zirconia.color, roughness: .34, metalness: 0,
     transmission: .04, thickness: 1.2, ior: 1.55,
-    clearcoat: .7, clearcoatRoughness: .12,
+    clearcoat: .7, clearcoatRoughness: .12, side: THREE.DoubleSide,
   });
   const tiMat = new THREE.MeshPhysicalMaterial({ color: '#BAC3CD', metalness: 1, roughness: .26, clearcoat: .4 });
   const fixMat = new THREE.MeshPhysicalMaterial({ color: '#9EA9B6', metalness: 1, roughness: .38 });
   const screwMat = new THREE.MeshPhysicalMaterial({ color: '#D4A84E', metalness: 1, roughness: .24 });
 
-  const crown = new THREE.Mesh(crownGeometry(), crownMat);
-  crown.scale.setScalar(.95);
+  const crown = new THREE.Mesh(await crownGeometry(), crownMat);
   const abutment = new THREE.Mesh(abutmentGeometry(), tiMat);
   const screw = new THREE.Mesh(screwGeometry(), screwMat);
   const fixture = new THREE.Mesh(fixtureGeometry(), fixMat);
   const parts = [crown, abutment, screw, fixture];
   // 조립 상태 기준 높이
-  const HOME = [1.42, 0, 0, 0];
+  const HOME = [.41, 0, 0, 0];
   // 분해 시 이동량
   const SPREAD = [2.3, 1.05, .45, -1.0];
   parts.forEach(m => body.add(m));
@@ -265,7 +244,7 @@ function boot() {
     parts.forEach((m, i) => {
       m.position.y = HOME[i] + SPREAD[i] * state.ex + INTRO[i];
       const pulse = i === active ? 1 + .035 * Math.sin(t * 5) : 1;
-      m.scale.setScalar((i === 0 ? .95 : 1) * pulse);
+      m.scale.setScalar(pulse);
     });
     screw.position.x = 0;
     crown.rotation.x = state.ex * .35;
@@ -290,9 +269,7 @@ function boot() {
   frame();
 }
 
-try {
-  boot();
-} catch (err) {
-  console.warn('WebGL을 쓸 수 없어 3D 없이 표시합니다.', err);
+boot().catch(err => {
+  console.warn('3D를 표시할 수 없어 3D 없이 표시합니다.', err);
   document.getElementById('stage').remove();
-}
+});
