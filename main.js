@@ -31,16 +31,19 @@ const MATERIALS = {
 };
 
 // ---------- 형상 만들기 ----------
-// 실제 디자인한 상악 구치부 크라운(mesh_17.stl)을 변환한 메쉬
-// 형식: [정점 수 u32][인덱스 수 u32][위치 f32×3…][인덱스 u16…], 마진 Y=0, 교합면 +Y
-async function crownGeometry() {
+// 실제 디자인한 상악 구치부 크라운(mesh_17.stl)을 tools/convert_crown.py로 변환한 메쉬
+// 형식: [정점 수][인덱스 수][마진 점 수] u32, 위치 f32×3, 인덱스 u16, 마진 f32×3
+// 마진 Y=0 부근, 교합면 +Y, 마진 중심이 원점
+async function loadCrown() {
   const buf = await (await fetch('models/crown17.bin')).arrayBuffer();
-  const [nv, ni] = new Uint32Array(buf, 0, 2);
+  const [nv, ni, nm] = new Uint32Array(buf, 0, 3);
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(buf, 8, nv * 3), 3));
-  g.setIndex(new THREE.BufferAttribute(new Uint16Array(buf, 8 + nv * 12, ni), 1));
+  let off = 12;
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(buf.slice(off, off += nv * 12)), 3));
+  g.setIndex(new THREE.BufferAttribute(new Uint16Array(buf.slice(off, off += ni * 2)), 1));
   g.computeVertexNormals();
-  return g;
+  const margin = new Float32Array(buf.slice(off, off + nm * 12));
+  return { geometry: g, margin };
 }
 
 function fixtureGeometry() {
@@ -54,10 +57,49 @@ function fixtureGeometry() {
   return new THREE.LatheGeometry(pts, 72);
 }
 
-function abutmentGeometry() {
-  const pts = [V2(0, 0), V2(.36, 0), V2(.44, .1), V2(.58, .26), V2(.72, .38), V2(.75, .42), V2(.62, .46),
-    V2(.46, .52), V2(.40, .9), V2(.36, 1.2), V2(.29, 1.32), V2(0, 1.34)];
-  return new THREE.LatheGeometry(pts, 72);
+// 커스텀 어버트먼트: 숄더 외곽이 크라운 마진 라인과 정확히 일치하도록 각도별로 프로파일을 만든다
+function abutmentGeometry(margin, seatY) {
+  const n = margin.length / 3;
+  const radius = Array.from({ length: n }, (_, j) => Math.hypot(margin[j * 3], margin[j * 3 + 2]));
+  // 포스트용: 마진 반지름을 각도 방향으로 가우시안 평균해 주름을 없앰 (마진·챔퍼는 원래 값 유지)
+  const smooth = radius.map((_, j) => {
+    let sum = 0, wsum = 0;
+    for (let k = -12; k <= 12; k++) {
+      const w = Math.exp(-(k * k) / 32);
+      sum += radius[(j + k + n) % n] * w; wsum += w;
+    }
+    return sum / wsum;
+  });
+  const rings = [];
+  for (let j = 0; j < n; j++) {
+    const mx = margin[j * 3], my = margin[j * 3 + 1] + seatY, mz = margin[j * 3 + 2];
+    const rm = radius[j], rp = smooth[j], cx = mx / rm, cz = mz / rm;
+    const prof = [[.36, 0], [.39, .06]];
+    // 오목한 출현 윤곽(emergence profile)으로 마진까지 벌어짐
+    for (const t of [.2, .4, .6, .8]) prof.push([.39 + (rm - .39) * Math.pow(t, 1.6), .06 + (my - .06) * t]);
+    // 마진 → 좁은 챔퍼 → 마진 모양을 따라 좁아지는 포스트 → 둥근 윗면
+    prof.push([rm, my], [rm - .035, my + .025], [rp * .86, my + .07]);
+    for (const t of [.35, .7, 1]) prof.push([lerp(rp * .86, rp * .66, t), lerp(my + .07, 1.16, t)]);
+    prof.push([rp * .6, 1.26], [rp * .45, 1.31], [rp * .25, 1.335]);
+    rings.push(prof.map(([r, y]) => [cx * r, y, cz * r]));
+  }
+  const m = rings[0].length;
+  const pos = [];
+  for (let j = 0; j < n; j++) for (let i = 0; i < m; i++) pos.push(...rings[j][i]);
+  const bottom = pos.length / 3; pos.push(0, 0, 0);
+  const top = pos.length / 3; pos.push(0, 1.34, 0);
+  const idx = [];
+  for (let j = 0; j < n; j++) {
+    const a = j * m, b = ((j + 1) % n) * m;
+    for (let i = 0; i < m - 1; i++) idx.push(a + i, a + i + 1, b + i, b + i, a + i + 1, b + i + 1);
+    idx.push(bottom, a, b);
+    idx.push(a + m - 1, top, b + m - 1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
 }
 
 function screwGeometry() {
@@ -106,13 +148,16 @@ async function boot() {
   const fixMat = new THREE.MeshPhysicalMaterial({ color: '#9EA9B6', metalness: 1, roughness: .38 });
   const screwMat = new THREE.MeshPhysicalMaterial({ color: '#D4A84E', metalness: 1, roughness: .24 });
 
-  const crown = new THREE.Mesh(await crownGeometry(), crownMat);
-  const abutment = new THREE.Mesh(abutmentGeometry(), tiMat);
+  // 크라운이 앉는 높이(마진 최상단)
+  const SEAT = .41;
+  const { geometry: crownGeo, margin } = await loadCrown();
+  const crown = new THREE.Mesh(crownGeo, crownMat);
+  const abutment = new THREE.Mesh(abutmentGeometry(margin, SEAT), tiMat);
   const screw = new THREE.Mesh(screwGeometry(), screwMat);
   const fixture = new THREE.Mesh(fixtureGeometry(), fixMat);
   const parts = [crown, abutment, screw, fixture];
   // 조립 상태 기준 높이
-  const HOME = [.41, 0, 0, 0];
+  const HOME = [SEAT, 0, 0, 0];
   // 분해 시 이동량
   const SPREAD = [2.3, 1.05, .45, -1.0];
   parts.forEach(m => body.add(m));
