@@ -1,6 +1,6 @@
 # Sampletorch
 
-가상 브랜드 Sampletorch의 3D 랜딩 페이지. 빌드 과정 없는 정적 사이트(HTML/CSS/JS + Three.js CDN).
+샘플토치 치과기공소 홈페이지 (임플란트 보철 3D 모델). 기공소명·연락처·수치는 임시값이므로 실제 정보로 교체할 것. 빌드 과정 없는 정적 사이트(HTML/CSS/JS + Three.js CDN).
 
 ## 로컬 미리보기
 ```
